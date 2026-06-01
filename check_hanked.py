@@ -85,41 +85,21 @@ def is_relevant(procurement: dict) -> bool:
     return any(kw.lower() in text for kw in RELEVANT_KEYWORDS)
 
 def format_procurement(p: dict) -> str:
-    # Try common field name variants
-    name = (
-        p.get("procurementObjectName")
-        or p.get("name")
-        or p.get("title")
-        or "Pealkiri puudub"
-    )
-    ref = (
-        p.get("procurementNumber")
-        or p.get("referenceNumber")
-        or p.get("id")
-        or ""
-    )
-    buyer = (
-        p.get("procuringEntityName")
-        or p.get("buyerName")
-        or p.get("organisationName")
-        or ""
-    )
-    date_raw = (
-        p.get("procurementProcessRevealDate")
-        or p.get("publishedDate")
-        or p.get("revealDate")
-        or ""
-    )
+    name = p.get("procurementName") or "Pealkiri puudub"
+    ref = p.get("procurementReferenceNr") or ""
+    buyer = p.get("contractingAuthorityName") or ""
+    date_raw = p.get("procProcessRevealDate") or ""
     date = date_raw[:10] if date_raw else ""
+    cpv = p.get("mainCpvName") or ""
     url = BASE_URL.format(ref) if ref else "https://riigihanked.riik.ee/rhr-web/#/search"
 
     lines = [f"• {name}"]
+    if cpv:
+        lines.append(f"  Kategooria: {cpv}")
     if buyer:
         lines.append(f"  Hankija: {buyer}")
     if date:
         lines.append(f"  Avaldatud: {date}")
-    if ref:
-        lines.append(f"  Viitenumber: {ref}")
     lines.append(f"  Link: {url}")
     return "\n".join(lines)
 
@@ -165,10 +145,6 @@ def main():
     print(f"Fetching procurements from {date_from} to {date_to}...")
     procurements = fetch_procurements(date_from, date_to)
     print(f"Total procurements: {len(procurements)}")
-    if procurements:
-        print(f"First procurement keys: {list(procurements[0].keys())}")
-        print(f"First procurement sample: {json.dumps(procurements[0], ensure_ascii=False, indent=2)[:800]}")
-
     relevant = [p for p in procurements if is_relevant(p)]
     print(f"Relevant to the client: {len(relevant)}")
 
