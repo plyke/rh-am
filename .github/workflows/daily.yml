@@ -25,3 +25,12 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python check_hanked.py
+
+      - name: Keep workflow alive
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+          echo "Last run: $(date)" > last_run.txt
+          git add last_run.txt
+          git commit -m "chore: daily run $(date +'%Y-%m-%d')" || true
+          git push
