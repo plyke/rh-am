@@ -59,11 +59,14 @@ def fetch_procurements(date_from: str, date_to: str) -> list:
         "Referer": "https://riigihanked.riik.ee/rhr-web/",
     })
 
-    # Establish session and get XSRF token
-    session.get("https://riigihanked.riik.ee/rhr-web/", timeout=30)
+    # Establish session via the API itself to get XSRF token
+    session.get("https://riigihanked.riik.ee/rhr/api/public/v1/current-user", timeout=30)
     xsrf_token = session.cookies.get("XSRF-TOKEN")
     if xsrf_token:
         session.headers["X-XSRF-TOKEN"] = xsrf_token
+        print(f"XSRF token obtained: {xsrf_token[:8]}...")
+    else:
+        print("Warning: no XSRF token received")
 
     response = session.post(API_URL, json=payload, timeout=30)
     response.raise_for_status()
