@@ -50,14 +50,22 @@ def fetch_procurements(date_from: str, date_to: str) -> list:
             "procurementProcessRevealDateEnd": date_to,
         },
     }
-    headers = {
-        "Content-Type": "application/json",
+
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*",
         "Origin": "https://riigihanked.riik.ee",
         "Referer": "https://riigihanked.riik.ee/rhr-web/",
-        "User-Agent": "Mozilla/5.0 (compatible; the clientMonitor/1.0)",
-    }
-    response = requests.post(API_URL, json=payload, headers=headers, timeout=30)
+    })
+
+    # Establish session and get XSRF token
+    session.get("https://riigihanked.riik.ee/rhr-web/", timeout=30)
+    xsrf_token = session.cookies.get("XSRF-TOKEN")
+    if xsrf_token:
+        session.headers["X-XSRF-TOKEN"] = xsrf_token
+
+    response = session.post(API_URL, json=payload, timeout=30)
     response.raise_for_status()
     data = response.json()
 
