@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 API_URL = "https://riigihanked.riik.ee/rhr/api/public/v1/search/procurements"
 BASE_URL = "https://riigihanked.riik.ee/rhr-web/#/procurement/{}/general-info"
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 GEMINI_PROMPT = """You are evaluating Estonian public procurement notices for relevance to the client Eesti OÜ, a medical laboratory services company.
 
@@ -94,7 +94,7 @@ def filter_with_gemini(procurements: list, api_key: str) -> list:
 
     response = requests.post(
         GEMINI_URL,
-        params={"key": api_key},
+        headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
         json={"contents": [{"parts": [{"text": prompt}]}]},
         timeout=30,
     )
