@@ -5,6 +5,7 @@ Fetches procurements published in the last 24h and emails relevant ones.
 """
 import os
 import json
+import time
 import requests
 import smtplib
 from email.mime.text import MIMEText
@@ -92,15 +93,22 @@ def filter_with_gemini(procurements: list, api_key: str) -> list:
 
     prompt = GEMINI_PROMPT.format(items=json.dumps(items, ensure_ascii=False, indent=2))
 
-    response = requests.post(
-        GEMINI_URL,
-        headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
-        json={"contents": [{"parts": [{"text": prompt}]}]},
-        timeout=30,
-    )
-    if not response.ok:
-        print(f"Gemini error {response.status_code}: {response.text}")
-    response.raise_for_status()
+    for attempt in range(3):
+        response = requests.post(
+            GEMINI_URL,
+            headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
+            json={"contents": [{"parts": [{"text": prompt}]}]},
+            timeout=30,
+        )
+        if response.status_code == 429:
+            wait = 40 * (attempt + 1)
+            print(f"Rate limited, waiting {wait}s before retry {attempt + 1}/3...")
+            time.sleep(wait)
+            continue
+        if not response.ok:
+            print(f"Gemini error {response.status_code}: {response.text}")
+        response.raise_for_status()
+        break
 
     raw = response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
     print(f"Gemini response: {raw}")
