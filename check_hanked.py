@@ -125,15 +125,17 @@ def send_email(relevant: list, total: int, gmail_user: str, gmail_password: str,
             f"Kõik täna avaldatud hanked: https://riigihanked.riik.ee/rhr-web/#/search"
         )
 
+    recipients = [r.strip() for r in recipient.split(",")]
+
     msg = MIMEMultipart()
     msg["From"] = gmail_user
-    msg["To"] = recipient
+    msg["To"] = ", ".join(recipients)
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain", "utf-8"))
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(gmail_user, gmail_password)
-        server.sendmail(gmail_user, recipient, msg.as_string())
+        server.sendmail(gmail_user, recipients, msg.as_string())
 
     print(f"Email sent to {recipient}")
 
