@@ -13,34 +13,34 @@ from datetime import datetime, timedelta, timezone
 
 API_URL = "https://riigihanked.riik.ee/rhr/api/public/v1/search/procurements"
 BASE_URL = "https://riigihanked.riik.ee/rhr-web/#/procurement/{}/general-info"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
-# Keywords relevant to the client: lab testing, diagnostics, occupational health, imaging
-RELEVANT_KEYWORDS = [
-    # Core lab / testing
-    "labor", "labori", "laboratoor", "analüüs", "analüüse", "analüüside",
-    "uuring", "uuringud", "uuringute", "uuringuteenused",
-    "diagnostika", "diagnostiline", "diagnoos",
-    # Occupational health
-    "töötervishoiu", "töötervishoiuteenused", "töötervishoiuteenus",
-    "tervisekontroll", "tervisekontrolli", "töötervishoid",
-    # Medical specialties the client covers
-    "mikrobioloogia", "histoloogia", "tsütoloogia", "patoloogia",
-    "biokeemia", "seroloogia", "geneetika", "immunoloogia",
-    "vereu", "vereanalüüs", "vereanalüüside",
-    "radioloogia", "pildidiagnostika", "röntgen", "ultraheliuuring",
-    # General health services
-    "meditsiini", "meditsiinilise", "tervishoiuteenus", "kliiniline",
-    "haigla", "polikliinik", "ambulatoor",
-    # Testing / screening
-    "pcr", "kiirtest", "kiirtestid", "sõeluuring", "ennetav",
-    "vaktsineerimine", "vaktsineerimis",
-    # Lab supplies (adjacent)
-    "reaktiiv", "reaktiivid", "laborivarustus", "laboritarbed",
-    "meditsiiniseadmed", "meditsiinivarustus",
-    # English terms sometimes appear
-    "laboratory", "diagnostic", "medical testing", "health screening",
-    "clinical analysis",
-]
+GEMINI_PROMPT = """You are evaluating Estonian public procurement notices for relevance to the client Eesti OÜ, a medical laboratory services company.
+
+INCLUDE procurements about:
+- Laboratory testing services or clinical analysis services
+- Occupational health screening or employee health checks (töötervishoiuteenused)
+- Medical laboratory work: microbiological, histological, cytological, biochemical, serological analyses
+- Blood, urine, or other biological sample analysis
+- PCR, rapid testing, or infectious disease screening services
+- General health screening or diagnostic testing services
+
+EXCLUDE procurements about:
+- Medical devices or equipment (meditsiiniseadmed)
+- Reagents, chemicals, or laboratory consumables (reagendid, laboritarbed)
+- Medical software or IT systems
+- Construction, renovation, or facility maintenance
+- Pharmaceuticals or drugs
+- Ambulance, transport, or logistics services
+- Radiology equipment or imaging devices
+
+Here are the procurements as JSON. Each has a reference number, name, CPV category, and short description:
+{items}
+
+Return ONLY a raw JSON array of reference numbers (strings) that should be INCLUDED. No explanation, no markdown.
+Example: ["311400", "311317"]
+If none qualify, return: []"""
+
 
 def fetch_procurements(date_from: str, date_to: str) -> list:
     payload = {
@@ -59,7 +59,6 @@ def fetch_procurements(date_from: str, date_to: str) -> list:
         "Referer": "https://riigihanked.riik.ee/rhr-web/",
     })
 
-    # Establish session via the API itself to get XSRF token
     session.get("https://riigihanked.riik.ee/rhr/api/public/v1/current-user", timeout=30)
     xsrf_token = session.cookies.get("XSRF-TOKEN")
     if xsrf_token:
@@ -72,7 +71,6 @@ def fetch_procurements(date_from: str, date_to: str) -> list:
     response.raise_for_status()
     data = response.json()
 
-    # Handle different possible response shapes
     if isinstance(data, list):
         return data
     for key in ("procurements", "data", "content", "items", "results"):
@@ -80,9 +78,40 @@ def fetch_procurements(date_from: str, date_to: str) -> list:
             return data[key]
     return []
 
-def is_relevant(procurement: dict) -> bool:
-    text = json.dumps(procurement, ensure_ascii=False).lower()
-    return any(kw.lower() in text for kw in RELEVANT_KEYWORDS)
+
+def filter_with_gemini(procurements: list, api_key: str) -> list:
+    items = [
+        {
+            "ref": p.get("procurementReferenceNr", ""),
+            "name": p.get("procurementName", ""),
+            "category": p.get("mainCpvName", ""),
+            "description": p.get("shortDescription", ""),
+        }
+        for p in procurements
+    ]
+
+    prompt = GEMINI_PROMPT.format(items=json.dumps(items, ensure_ascii=False, indent=2))
+
+    response = requests.post(
+        GEMINI_URL,
+        params={"key": api_key},
+        json={"contents": [{"parts": [{"text": prompt}]}]},
+        timeout=30,
+    )
+    response.raise_for_status()
+
+    raw = response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+    print(f"Gemini response: {raw}")
+
+    # Strip markdown code fences if present
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+
+    relevant_refs = set(json.loads(raw))
+    return [p for p in procurements if p.get("procurementReferenceNr") in relevant_refs]
+
 
 def format_procurement(p: dict) -> str:
     name = p.get("procurementName") or "Pealkiri puudub"
@@ -102,6 +131,7 @@ def format_procurement(p: dict) -> str:
         lines.append(f"  Avaldatud: {date}")
     lines.append(f"  Link: {url}")
     return "\n".join(lines)
+
 
 def send_email(relevant: list, total: int, gmail_user: str, gmail_password: str, recipient: str):
     today = datetime.now().strftime("%d.%m.%Y")
@@ -137,7 +167,8 @@ def send_email(relevant: list, total: int, gmail_user: str, gmail_password: str,
         server.login(gmail_user, gmail_password)
         server.sendmail(gmail_user, recipients, msg.as_string())
 
-    print(f"Email sent to {recipient}")
+    print(f"Email sent to {', '.join(recipients)}")
+
 
 def main():
     now = datetime.now(timezone.utc)
@@ -147,7 +178,9 @@ def main():
     print(f"Fetching procurements from {date_from} to {date_to}...")
     procurements = fetch_procurements(date_from, date_to)
     print(f"Total procurements: {len(procurements)}")
-    relevant = [p for p in procurements if is_relevant(p)]
+
+    gemini_api_key = os.environ["GEMINI_API_KEY"]
+    relevant = filter_with_gemini(procurements, gemini_api_key)
     print(f"Relevant to the client: {len(relevant)}")
 
     gmail_user = os.environ["GMAIL_USER"]
@@ -155,6 +188,7 @@ def main():
     recipient = os.environ["RECIPIENT_EMAIL"]
 
     send_email(relevant, len(procurements), gmail_user, gmail_password, recipient)
+
 
 if __name__ == "__main__":
     main()
