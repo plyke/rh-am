@@ -165,6 +165,9 @@ def main():
     print(f"Fetching procurements from {date_from} to {date_to}...")
     procurements = fetch_procurements(date_from, date_to)
     print(f"Total procurements: {len(procurements)}")
+    if procurements:
+        print(f"First procurement keys: {list(procurements[0].keys())}")
+        print(f"First procurement sample: {json.dumps(procurements[0], ensure_ascii=False, indent=2)[:800]}")
 
     relevant = [p for p in procurements if is_relevant(p)]
     print(f"Relevant to the client: {len(relevant)}")
