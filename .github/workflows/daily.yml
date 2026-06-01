@@ -2,8 +2,7 @@ name: Daily Riigihanked Monitor
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # 9:00 AM Estonia (UTC+3)
-    - cron: '30 9 * * *'  # 12:30 PM Estonia (UTC+3)
+    - cron: '0 6 * * *'  # 9:00 AM Estonia (UTC+3)
   workflow_dispatch:      # allows manual run from GitHub UI
 
 jobs:
