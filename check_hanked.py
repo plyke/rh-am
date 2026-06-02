@@ -147,26 +147,37 @@ def format_procurement(p: dict) -> str:
     return "\n".join(lines)
 
 
-def send_email(relevant: list, total: int, gmail_user: str, gmail_password: str, recipient: str):
+def format_procurement_brief(p: dict) -> str:
+    name = p.get("procurementName") or "Pealkiri puudub"
+    ref = p.get("procurementReferenceNr") or ""
+    buyer = p.get("contractingAuthorityName") or ""
+    url = BASE_URL.format(ref) if ref else "https://riigihanked.riik.ee/rhr-web/#/search"
+    buyer_part = f" ({buyer})" if buyer else ""
+    return f"  – {name}{buyer_part}\n    {url}"
+
+
+def send_email(relevant: list, all_procurements: list, gmail_user: str, gmail_password: str, recipient: str):
     today = datetime.now().strftime("%d.%m.%Y")
+    total = len(all_procurements)
+    all_list = "\n".join(format_procurement_brief(p) for p in all_procurements)
 
     if not relevant:
-        subject = f"[Riigihanked {today}] the clientile sobivaid hankeid ei leitud"
+        subject = f"[Riigihanked {today}] Sobivaid hankeid ei leitud"
         body = (
             f"Kuupäev: {today}\n"
             f"Kontrollitud hankeid: {total}\n\n"
-            "Viimase 24 tunni jooksul ei leitud a large medical laboratory-le potentsiaalselt sobivaid riigihanked.\n\n"
-            f"Kõik täna avaldatud hanked: https://riigihanked.riik.ee/rhr-web/#/search"
+            "Viimase 24 tunni jooksul ei leitud potentsiaalselt sobivaid riigihanked.\n\n"
+            f"Kõik kontrollitud hanked:\n{all_list}"
         )
     else:
-        subject = f"[Riigihanked {today}] {len(relevant)} potentsiaalselt sobivat hanget the clientile"
+        subject = f"[Riigihanked {today}] {len(relevant)} potentsiaalselt sobivat hanget"
         items = "\n\n".join(format_procurement(p) for p in relevant)
         body = (
             f"Kuupäev: {today}\n"
             f"Kontrollitud hankeid: {total} | Sobivaid: {len(relevant)}\n\n"
-            "Potentsiaalselt a large medical laboratory-le sobivad riigihanked:\n\n"
+            "Potentsiaalselt sobivad riigihanked:\n\n"
             f"{items}\n\n"
-            f"Kõik täna avaldatud hanked: https://riigihanked.riik.ee/rhr-web/#/search"
+            f"---\nKõik kontrollitud hanked:\n{all_list}"
         )
 
     recipients = [r.strip() for r in recipient.split(",")]
@@ -201,7 +212,7 @@ def main():
     gmail_password = os.environ["GMAIL_APP_PASSWORD"]
     recipient = os.environ["RECIPIENT_EMAIL"]
 
-    send_email(relevant, len(procurements), gmail_user, gmail_password, recipient)
+    send_email(relevant, procurements, gmail_user, gmail_password, recipient)
 
 
 if __name__ == "__main__":
