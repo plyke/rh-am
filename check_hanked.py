@@ -156,7 +156,7 @@ def format_procurement_brief(p: dict) -> str:
     return f"  – {name}{buyer_part}\n    {url}"
 
 
-def send_email(relevant: list, all_procurements: list, gmail_user: str, gmail_password: str, recipient: str):
+def send_email(relevant: list, all_procurements: list, lookback_hours: int, gmail_user: str, gmail_password: str, recipient: str):
     today = datetime.now().strftime("%d.%m.%Y")
     total = len(all_procurements)
     all_list = "\n".join(format_procurement_brief(p) for p in all_procurements)
@@ -166,7 +166,7 @@ def send_email(relevant: list, all_procurements: list, gmail_user: str, gmail_pa
         body = (
             f"Kuupäev: {today}\n"
             f"Kontrollitud hankeid: {total}\n\n"
-            "Viimase 24 tunni jooksul ei leitud potentsiaalselt sobivaid riigihanked.\n\n"
+            f"Viimase {lookback_hours} tunni jooksul ei leitud potentsiaalselt sobivaid riigihankeid.\n\n"
             f"Kõik kontrollitud hanked:\n{all_list}"
         )
     else:
@@ -213,7 +213,7 @@ def main():
     gmail_password = os.environ["GMAIL_APP_PASSWORD"]
     recipient = os.environ["RECIPIENT_EMAIL"]
 
-    send_email(relevant, procurements, gmail_user, gmail_password, recipient)
+    send_email(relevant, procurements, lookback_hours, gmail_user, gmail_password, recipient)
 
 
 if __name__ == "__main__":
