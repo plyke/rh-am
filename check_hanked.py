@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Daily Riigihanked monitor for the client Eesti OÜ.
+Daily Riigihanked monitor for a large medical laboratory.
 Fetches procurements published in the last 24h and emails relevant ones.
 """
 import os
@@ -14,9 +14,10 @@ from datetime import datetime, timedelta, timezone
 
 API_URL = "https://riigihanked.riik.ee/rhr/api/public/v1/search/procurements"
 BASE_URL = "https://riigihanked.riik.ee/rhr-web/#/procurement/{}/general-info"
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama-3.3-70b-versatile"
 
-GEMINI_PROMPT = """You are evaluating Estonian public procurement notices for relevance to the client Eesti OÜ, a medical laboratory services company.
+GEMINI_PROMPT = """You are evaluating Estonian public procurement notices for relevance to a large medical laboratory services company.
 
 INCLUDE procurements about:
 - Laboratory testing services or clinical analysis services
@@ -80,7 +81,7 @@ def fetch_procurements(date_from: str, date_to: str) -> list:
     return []
 
 
-def filter_with_gemini(procurements: list, api_key: str) -> list:
+def filter_with_groq(procurements: list, api_key: str) -> list:
     items = [
         {
             "ref": p.get("procurementReferenceNr", ""),
@@ -95,9 +96,13 @@ def filter_with_gemini(procurements: list, api_key: str) -> list:
 
     for attempt in range(3):
         response = requests.post(
-            GEMINI_URL,
-            headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
-            json={"contents": [{"parts": [{"text": prompt}]}]},
+            GROQ_URL,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": GROQ_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0,
+            },
             timeout=30,
         )
         if response.status_code == 429:
@@ -106,14 +111,13 @@ def filter_with_gemini(procurements: list, api_key: str) -> list:
             time.sleep(wait)
             continue
         if not response.ok:
-            print(f"Gemini error {response.status_code}: {response.text}")
+            print(f"Groq error {response.status_code}: {response.text}")
         response.raise_for_status()
         break
 
-    raw = response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-    print(f"Gemini response: {raw}")
+    raw = response.json()["choices"][0]["message"]["content"].strip()
+    print(f"Groq response: {raw}")
 
-    # Strip markdown code fences if present
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
@@ -151,7 +155,7 @@ def send_email(relevant: list, total: int, gmail_user: str, gmail_password: str,
         body = (
             f"Kuupäev: {today}\n"
             f"Kontrollitud hankeid: {total}\n\n"
-            "Viimase 24 tunni jooksul ei leitud the client Eesti OÜ-le potentsiaalselt sobivaid riigihanked.\n\n"
+            "Viimase 24 tunni jooksul ei leitud a large medical laboratory-le potentsiaalselt sobivaid riigihanked.\n\n"
             f"Kõik täna avaldatud hanked: https://riigihanked.riik.ee/rhr-web/#/search"
         )
     else:
@@ -160,7 +164,7 @@ def send_email(relevant: list, total: int, gmail_user: str, gmail_password: str,
         body = (
             f"Kuupäev: {today}\n"
             f"Kontrollitud hankeid: {total} | Sobivaid: {len(relevant)}\n\n"
-            "Potentsiaalselt the client Eesti OÜ-le sobivad riigihanked:\n\n"
+            "Potentsiaalselt a large medical laboratory-le sobivad riigihanked:\n\n"
             f"{items}\n\n"
             f"Kõik täna avaldatud hanked: https://riigihanked.riik.ee/rhr-web/#/search"
         )
@@ -189,8 +193,8 @@ def main():
     procurements = fetch_procurements(date_from, date_to)
     print(f"Total procurements: {len(procurements)}")
 
-    gemini_api_key = os.environ["GEMINI_API_KEY"]
-    relevant = filter_with_gemini(procurements, gemini_api_key)
+    gemini_api_key = os.environ["GROQ_API_KEY"]
+    relevant = filter_with_groq(procurements, gemini_api_key)
     print(f"Relevant to the client: {len(relevant)}")
 
     gmail_user = os.environ["GMAIL_USER"]
