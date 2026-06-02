@@ -197,8 +197,9 @@ def send_email(relevant: list, all_procurements: list, gmail_user: str, gmail_pa
 
 def main():
     now = datetime.now(timezone.utc)
+    lookback_hours = 72 if now.weekday() == 0 else 24  # Monday = 0
     date_to = now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-    date_from = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    date_from = (now - timedelta(hours=lookback_hours)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
     print(f"Fetching procurements from {date_from} to {date_to}...")
     procurements = fetch_procurements(date_from, date_to)
