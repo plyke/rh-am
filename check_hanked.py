@@ -196,9 +196,21 @@ def send_email(relevant: list, all_procurements: list, lookback_hours: int, gmai
     print(f"Email sent to {', '.join(recipients)}")
 
 
+def get_lookback_hours(now: datetime) -> int:
+    try:
+        with open("last_run.txt") as f:
+            last_run = datetime.fromisoformat(f.read().strip().rstrip("Z")).replace(tzinfo=timezone.utc)
+        hours = max(1, int((now - last_run).total_seconds() / 3600) + 1)
+        print(f"Last run: {last_run.isoformat()}, lookback: {hours}h")
+        return hours
+    except Exception as e:
+        print(f"Could not read last_run.txt ({e}), defaulting to 48h lookback")
+        return 48
+
+
 def main():
     now = datetime.now(timezone.utc)
-    lookback_hours = 72 if now.weekday() == 0 else 24  # Monday = 0
+    lookback_hours = get_lookback_hours(now)
     date_to = now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
     date_from = (now - timedelta(hours=lookback_hours)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
