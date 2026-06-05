@@ -130,11 +130,12 @@ def filter_with_groq(procurements: list, api_key: str) -> list:
 def format_procurement(p: dict) -> str:
     name = p.get("procurementName") or "Pealkiri puudub"
     ref = p.get("procurementReferenceNr") or ""
+    pid = p.get("procurementId") or ""
     buyer = p.get("contractingAuthorityName") or ""
     date_raw = p.get("procProcessRevealDate") or ""
     date = date_raw[:10] if date_raw else ""
     cpv = p.get("mainCpvName") or ""
-    url = BASE_URL.format(ref) if ref else "https://riigihanked.riik.ee/rhr-web/#/search"
+    url = BASE_URL.format(pid) if pid else "https://riigihanked.riik.ee/rhr-web/#/search"
 
     lines = [f"• {name}"]
     if cpv:
@@ -149,9 +150,9 @@ def format_procurement(p: dict) -> str:
 
 def format_procurement_brief(p: dict) -> str:
     name = p.get("procurementName") or "Pealkiri puudub"
-    ref = p.get("procurementReferenceNr") or ""
+    pid = p.get("procurementId") or ""
     buyer = p.get("contractingAuthorityName") or ""
-    url = BASE_URL.format(ref) if ref else "https://riigihanked.riik.ee/rhr-web/#/search"
+    url = BASE_URL.format(pid) if pid else "https://riigihanked.riik.ee/rhr-web/#/search"
     buyer_part = f" ({buyer})" if buyer else ""
     return f"  – {name}{buyer_part}\n    {url}"
 
