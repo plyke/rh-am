@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Daily Riigihanked monitor for a large medical laboratory.
-Fetches procurements published in the last 24h and emails relevant ones.
+Weekly Riigihanked monitor for two analysts looking for hobby project work.
+Fetches procurements published in the last 7 days and emails relevant ones.
 """
 import os
 import json
@@ -17,24 +17,25 @@ BASE_URL = "https://riigihanked.riik.ee/rhr-web/#/procurement/{}/general-info"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
-GEMINI_PROMPT = """You are evaluating Estonian public procurement notices for relevance to a large medical laboratory services company.
+GEMINI_PROMPT = """You are evaluating Estonian public procurement notices for relevance to two freelance analysts (one data/BI analyst, one business/strategy analyst) who are looking for interesting side projects they can deliver together as a small team.
 
-INCLUDE procurements about:
-- Laboratory testing services or clinical analysis services
-- Occupational health screening or employee health checks (töötervishoiuteenused)
-- Medical laboratory work: microbiological, histological, cytological, biochemical, serological analyses
-- Blood, urine, or other biological sample analysis
-- PCR, rapid testing, or infectious disease screening services
-- General health screening or diagnostic testing services
+INCLUDE procurements where a small two-person analyst team could realistically do the work, such as:
+- Data analysis, statistical analysis, or data processing studies
+- Surveys, user research, or needs assessments (vajaduste uuring)
+- Market research or sector overviews (turu-uuring, ülevaade)
+- Feasibility studies or impact assessments (teostatavusuuring, mõjuanalüüs)
+- Strategy reports, policy analysis, or consulting briefs
+- Evaluations, audits, or monitoring frameworks (hindamine, audit)
+- Dashboard or reporting design (not full software development)
+- Any knowledge-work deliverable: a report, analysis, visualisation, or recommendation
 
-EXCLUDE procurements about:
-- Medical devices or equipment (meditsiiniseadmed)
-- Reagents, chemicals, or laboratory consumables (reagendid, laboritarbed)
-- Medical software or IT systems
-- Construction, renovation, or facility maintenance
-- Pharmaceuticals or drugs
-- Ambulance, transport, or logistics services
-- Radiology equipment or imaging devices
+EXCLUDE procurements that require:
+- Physical goods, equipment, or construction
+- Large teams, agencies, or accredited institutions
+- Specific professional licences (legal, medical, audit firms)
+- Full software development or IT infrastructure
+- Staffing, recruitment, or managed services
+- Transport, logistics, catering, or facility services
 
 Here are the procurements as JSON. Each has a reference number, name, CPV category, and short description:
 {items}
@@ -204,8 +205,8 @@ def get_lookback_hours(now: datetime) -> int:
         print(f"Last run: {last_run.isoformat()}, lookback: {hours}h")
         return hours
     except Exception as e:
-        print(f"Could not read last_run.txt ({e}), defaulting to 48h lookback")
-        return 48
+        print(f"Could not read last_run.txt ({e}), defaulting to 168h lookback")
+        return 168
 
 
 def main():
