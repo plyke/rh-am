@@ -32,7 +32,8 @@ INCLUDE procurements where a small two-person team could realistically do the wo
 - Small digital tools or prototypes that don't require a large dev team or complex infrastructure
 
 EXCLUDE procurements that require:
-- Physical goods, equipment, or construction
+- Physical goods, equipment, construction, or civil engineering works (even if framed as a study or supervision role requiring on-site presence)
+- Manual labour: cleaning, maintenance, landscaping, security guarding, waste management
 - Large teams, agencies, or accredited institutions
 - Specific professional licences (legal, medical, certified audit firms)
 - Large-scale or highly complex software systems (ERP, national-scale infrastructure, real-time safety-critical systems)
