@@ -17,23 +17,25 @@ BASE_URL = "https://riigihanked.riik.ee/rhr-web/#/procurement/{}/general-info"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
-GEMINI_PROMPT = """You are evaluating Estonian public procurement notices for relevance to two freelance analysts (one data/BI analyst, one business/strategy analyst) who are looking for interesting side projects they can deliver together as a small team.
+GEMINI_PROMPT = """You are evaluating Estonian public procurement notices for relevance to two freelance analysts (one data/BI analyst, one business/strategy analyst, both with some software development skills) who are looking for interesting side projects they can deliver together as a small team.
 
-INCLUDE procurements where a small two-person analyst team could realistically do the work, such as:
+INCLUDE procurements where a small two-person team could realistically do the work, such as:
 - Data analysis, statistical analysis, or data processing studies
 - Surveys, user research, or needs assessments (vajaduste uuring)
 - Market research or sector overviews (turu-uuring, ülevaade)
 - Feasibility studies or impact assessments (teostatavusuuring, mõjuanalüüs)
 - Strategy reports, policy analysis, or consulting briefs
 - Evaluations, audits, or monitoring frameworks (hindamine, audit)
-- Dashboard or reporting design (not full software development)
-- Any knowledge-work deliverable: a report, analysis, visualisation, or recommendation
+- Dashboard, reporting design, or data visualisation
+- Any knowledge-work deliverable: a report, analysis, or recommendation
+- Simpler software projects: websites, landing pages, small web apps, simple automation scripts, CMS setup, chatbots, form-based tools, API integrations
+- Small digital tools or prototypes that don't require a large dev team or complex infrastructure
 
 EXCLUDE procurements that require:
 - Physical goods, equipment, or construction
 - Large teams, agencies, or accredited institutions
-- Specific professional licences (legal, medical, audit firms)
-- Full software development or IT infrastructure
+- Specific professional licences (legal, medical, certified audit firms)
+- Large-scale or highly complex software systems (ERP, national-scale infrastructure, real-time safety-critical systems)
 - Staffing, recruitment, or managed services
 - Transport, logistics, catering, or facility services
 
